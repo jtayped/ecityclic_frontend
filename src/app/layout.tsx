@@ -16,8 +16,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "ECityClic",
-  description: "",
+  title: "HackEPS 2024 | Ecityclic",
 };
 
 export default function RootLayout({
