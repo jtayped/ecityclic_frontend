@@ -1,12 +1,14 @@
 import { useTramitContext } from "@/context/tramits";
 import { Badge } from "./ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
-import React from "react";
+import React, { useEffect, useRef, useCallback } from "react";
 import ToggleTramit from "./tramits/toggle";
 import { ScrollArea } from "./ui/scroll-area";
 
 const TramitList = () => {
-  const { results } = useTramitContext();
+  const { results, isLoading, hasMoreResults, loadNextPage } =
+    useTramitContext();
+  const observerTarget = useRef<HTMLDivElement>(null);
 
   // Animation variants for list items
   const itemVariants = {
@@ -15,9 +17,40 @@ const TramitList = () => {
     exit: { opacity: 0, x: -20 },
   };
 
+  // Callback for intersection observer
+  const handleObserver = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      const target = entries[0];
+      if (target.isIntersecting && hasMoreResults && !isLoading) {
+        loadNextPage();
+      }
+    },
+    [hasMoreResults, isLoading, loadNextPage]
+  );
+
+  // Set up intersection observer
+  useEffect(() => {
+    const element = observerTarget.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(handleObserver, {
+      root: null,
+      rootMargin: "20px",
+      threshold: 1.0,
+    });
+
+    observer.observe(element);
+
+    return () => {
+      if (element) {
+        observer.unobserve(element);
+      }
+    };
+  }, [handleObserver]);
+
   return (
     <ScrollArea className="h-full pr-3">
-      <ol className="grid divide-y">
+      <ol className="grid divide-y pb-2">
         <AnimatePresence>
           {results.map((r) => (
             <motion.li
@@ -43,6 +76,23 @@ const TramitList = () => {
             </motion.li>
           ))}
         </AnimatePresence>
+
+        {/* Observer target */}
+        <div ref={observerTarget} className="h-4 w-full" aria-hidden="true" />
+
+        {/* Loading indicator */}
+        {isLoading && (
+          <div className="py-4 text-center text-sm text-muted-foreground">
+            Loading more results...
+          </div>
+        )}
+
+        {/* End of results indicator */}
+        {!hasMoreResults && results.length > 0 && (
+          <div className="py-4 text-center text-sm text-muted-foreground">
+            No more results
+          </div>
+        )}
       </ol>
     </ScrollArea>
   );
